@@ -1,0 +1,19 @@
+---
+title: "Tea Records"
+author: Eric Scott
+output: html_notebook
+---
+
+```{r}
+library(ridigbio)
+library(tidyverse)
+```
+
+```{r}
+tea <- idig_search_records(rq=list(genus="Camellia", specificepithet = c("assamica", "sinensis")))
+
+tea %>% 
+  mutate(species = str_match)
+
+```
+
