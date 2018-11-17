@@ -1,0 +1,70 @@
+---
+title: "Plantago Invasion"
+output: html_notebook
+---
+```{r}
+library(ridigbio)
+library(tidyverse)
+library(lubridate)
+```
+
+```{r}
+plantain <- idig_search_records(rq=list(genus="Plantago", specificepithet = c("lanceolata", "major")))
+```
+
+```{r}
+plantain2 <-
+  plantain %>%
+  mutate(species = str_extract(scientificname, "(?<=\\s)\\w+"),
+         datecollected = as_date(datecollected)) %>% 
+  select(species, country, stateprovince, geopoint.lon, geopoint.lat, datecollected) %>%
+  filter(!is.na(geopoint.lon))
+```
+
+```{r}
+range(plantain2$datecollected, na.rm = TRUE)
+plantain2 %>% filter(datecollected > now())
+plantain3 <- plantain2 %>% filter(datecollected < now())
+```
+
+Ok, LOL.  Earliest record is 1769, latest record is 2027!!  Eight records collected in the FUTURE!!
+
+Let's pick just lanceolata and major
+```{r}
+plantain4 <-
+  plantain3 %>% 
+  filter(species %in% c("lanceolata", "major"))
+
+decades <- data_frame(years = seq(1760, 2020, 10)) %>%
+  mutate(start = make_date(year = years, month = 1, day = 1),
+                   end = lead(start),
+                   decades = interval(start, end))
+# plantain4 %>% 
+  # mutate(decade = floor_date(datecollected, unit = "decade"))
+  # mutate(decade = map(datecollected, decades, ~ifelse(.x %within% .y$decades, .y$decades, NA)))
+```
+
+```{r}
+decades <- interval(make_date(year = seq(1760, 2020, 10)), make_date(year = seq(1769, 2029, 10), month = 12, day = 31))
+
+plantain5 <- plantain4 %>% 
+  # slice(1:537) %>%
+  mutate(decade = purrr::map_chr(datecollected, ~decades[which(. %within% decades)] %>%
+                               int_start() %>% 
+                               year() %>% 
+                               as.character()) %>% unlist())
+
+plantain5
+```
+
+
+
+
+```{r}
+library(maps)
+world1 <- sf::st_as_sf(map('world', plot = FALSE, fill = TRUE))
+ggplot() + geom_sf(data = world1)  +
+  geom_point(data = plantain5, aes(x = geopoint.lon, y = geopoint.lat, color = species)) +
+  theme_minimal()
+```
+
